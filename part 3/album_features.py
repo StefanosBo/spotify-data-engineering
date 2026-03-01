@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from connect_to_db import get_data
+from db_utils import get_data
 
 def analyze_album_consistency(album_name="The Dark Side Of The Moon"):
     # SQL query to join albums_data and features_data on track_id
