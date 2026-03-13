@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import statsmodels.formula.api as smf
 from matplotlib.widgets import TextBox
+from collections import Counter 
 
+# Load the data
 df = pd.read_csv("data/artist_data.csv")
 
 # Filter out junk data
@@ -38,22 +40,36 @@ top_followers = df.nlargest(10, "followers")[["name", "followers"]]
 
 # Plot popularity
 plt.figure(figsize=(10, 5))
-plt.barh(top_popularity["name"], top_popularity["artist_popularity"])
+plt.barh(top_popularity["name"], top_popularity["artist_popularity"], color="#1DB954")
 plt.title("Top 10 Artists by Popularity")
-plt.xlabel("Popularity")
-plt.gca().invert_yaxis() # flip so 1st artist is on top (gca - get current axes flip so 1st artist is on top)
-plt.tight_layout() # adjust layout to prevent overlap
+plt.xlabel("Popularity score (0-100)")
+plt.gca().invert_yaxis()
+
+for bar in plt.gca().patches:
+    plt.gca().text(bar.get_width() + 0.8, bar.get_y() + bar.get_height() / 2,
+                   f"{bar.get_width():.0f}", va="center", fontsize=9, color="white")
+
+plt.xlim(0, top_popularity["artist_popularity"].max() + 5)
+plt.tight_layout()
 plt.show()
 
 # Plot followers
 plt.figure(figsize=(10, 5))
-plt.barh(top_followers["name"], top_followers["followers"])
+# Convert followers to millions to make the axis more readable
+top_followers_millions = top_followers.copy()
+top_followers_millions["followers_m"] = top_followers_millions["followers"] / 1_000_000
+
+plt.barh(top_followers_millions["name"], top_followers_millions["followers_m"])
 plt.title("Top 10 Artists by Followers")
-plt.xlabel("Followers")
+plt.xlabel("Followers (millions)")
 plt.gca().invert_yaxis()
+
+# Add value labels
+for i, value in enumerate(top_followers_millions["followers_m"]):
+    plt.text(value + 0.5, i, f"{value:.1f}M", va="center", fontsize=9)
+
 plt.tight_layout()
 plt.show()
-
 
 # Popularity vs followers
 # We use log scale for followers to handle the wide range of values and make the plot more interpretable
@@ -121,36 +137,58 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-
 # Relevance of genres
-# Function to get top artists by genre
+# Automatically detect all usable genre columns
+genre_cols = [col for col in df.columns if col.startswith("genre_")]
+genre_cols = [col for col in genre_cols if not df[col].isna().all()]
+print("Genre columns used:", genre_cols)
+
+# Create a clean list of genres for each artist
+if genre_cols:
+    df["genres_list"] = df[genre_cols].apply(
+        lambda row: [g for g in row.dropna().tolist() if str(g).strip() != ""],
+        axis=1
+    )
+elif "artist_genres" in df.columns:
+    df["genres_list"] = df["artist_genres"].fillna("").apply(
+        lambda x: [g.strip() for g in str(x).split(",") if g.strip() != ""]
+    )
+else:
+    df["genres_list"] = [[] for _ in range(len(df))]
+
+# Show most common genres as a useful summary
+all_genres = [g for sublist in df["genres_list"] for g in sublist]
+genre_counts = Counter(all_genres)
+
+genre_freq = pd.DataFrame(genre_counts.most_common(15), columns=["genre", "count"])
+print("\nTop 15 most common genres:")
+print(genre_freq.to_string(index=False))
+
+# Helper function to filter artists by genre
+def get_artists_by_genre(genre):
+    genre = genre.strip().lower()
+    mask = df["genres_list"].apply(
+        lambda lst: any(str(x).lower() == genre for x in lst)
+    )
+    return df[mask].nlargest(10, "artist_popularity")
+
+# Prints top 10 artists in a genre to terminal
 def top_artists_by_genre(genre):
-    # Filter artists where any genre column contains the input genre
-    mask = df[["genre_0", "genre_1", "genre_2", "genre_3", "genre_4"]].apply(
-        lambda col: col.str.contains(genre, case=False, na=False)
-    ).any(axis=1)
-    
-    filtered = df[mask].nlargest(10, "artist_popularity")[["name", "artist_popularity", "followers"]]
+    filtered = get_artists_by_genre(genre)
     print(f"Top 10 artists in genre: {genre}")
-    print(filtered.to_string(index=False))
+    print(filtered[["name", "artist_popularity", "followers"]].to_string(index=False))
 
 # Test it
 top_artists_by_genre("pop")
 top_artists_by_genre("rock")
 
-# Cool interactive plot to explore genres
-
+# Interactive plot to explore genres
 fig, ax = plt.subplots(figsize=(10, 6))
 plt.subplots_adjust(bottom=0.2)
 
 def update_genre(genre):
     ax.clear()
-    mask = df[["genre_0", "genre_1", "genre_2", "genre_3", "genre_4"]].apply(
-        lambda col: col.str.contains(genre, case=False, na=False)
-    ).any(axis=1)
-    
-    filtered = df[mask].nlargest(10, "artist_popularity")
-    
+    filtered = get_artists_by_genre(genre)
     if filtered.empty:
         ax.set_title(f"No artists found for: {genre}")
     else:
@@ -160,7 +198,6 @@ def update_genre(genre):
         ax.invert_yaxis()
     fig.canvas.draw()
 
-# Text box to type genre
 ax_box = plt.axes([0.2, 0.05, 0.6, 0.07])
 text_box = TextBox(ax_box, "Genre: ", initial="pop")
 text_box.ax.set_facecolor("black")
@@ -169,5 +206,49 @@ text_box.on_submit(update_genre)
 update_genre("pop")
 plt.show()
 
+# Count number of genres per artist
+df["num_genres"] = df["genres_list"].apply(len)
+print(df[["name", "num_genres"]].head())
 
+# Print summary and correlations for number of genres
+print("\nSummary statistics for number of genres:")
+print(df["num_genres"].describe())
+
+print("\nCorrelation between number of genres and popularity:", df["num_genres"].corr(df["artist_popularity"]))
+print("Correlation between number of genres and followers:", df["num_genres"].corr(df["followers"]))
+print("Correlation between number of genres and log followers:", df["num_genres"].corr(df["log_followers"]))
+
+# Scatter plot: number of genres vs popularity
+plt.figure(figsize=(10, 5))
+plt.scatter(df["num_genres"], df["artist_popularity"], alpha=0.4)
+plt.title("Number of Genres vs Popularity")
+plt.xlabel("Number of genres")
+plt.ylabel("Popularity")
+plt.tight_layout()
+plt.show()
+
+# Scatter plot: number of genres vs followers
+plt.figure(figsize=(10, 5))
+plt.scatter(df["num_genres"], df["followers"], alpha=0.4)
+plt.title("Number of Genres vs Followers")
+plt.xlabel("Number of genres")
+plt.ylabel("Followers")
+plt.yscale("log")  # makes followers easier to read
+plt.tight_layout()
+plt.show()
+
+# Extra creative insight:
+# divide artists into follower-size groups and compare popularity
+df["follower_bins"] = pd.qcut(df["followers"], 5, duplicates="drop")
+
+grouped_popularity = df.groupby("follower_bins", observed=False)["artist_popularity"].median()
+
+plt.figure(figsize=(10, 5))
+grouped_popularity.plot(kind="bar")
+plt.title("Median Popularity Across Follower Size Groups")
+plt.xlabel("Follower size group")
+plt.ylabel("Median popularity")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
 
