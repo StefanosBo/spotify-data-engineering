@@ -79,9 +79,12 @@ if page == "Overview":
 #sys.path.append(os.path.join(os.path.dirname(__file__), "..", "part1"))
 #from intro.py import plot_popularity, plot_followers
 
-    # Top 10 by popularity
+col_left, col_right = st.columns(2)
+
+# Top 10 by popularity
+with col_left:
     st.subheader("Top 10 Artists by Popularity")
-    top_popularity = df.nlargest(10, "artist_popularity")[["name", "artist_popularity"]]
+    top_popularity = df.nlargest(10, "artist_popularity")
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.barh(top_popularity["name"], top_popularity["artist_popularity"], color="#1DB954")
     ax.set_xlabel("Popularity score (0-100)")
@@ -92,9 +95,8 @@ if page == "Overview":
     ax.xaxis.label.set_color("white")
     st.pyplot(fig)
 
-    st.divider()
-
-    # Top 10 by followers
+# Top 10 by followers
+with col_right:
     st.subheader("Top 10 Artists by Followers")
     top_followers = df.nlargest(10, "followers").copy()
     top_followers["followers_m"] = top_followers["followers"] / 1_000_000
@@ -105,6 +107,5 @@ if page == "Overview":
     fig2.patch.set_facecolor("#191414")
     ax2.set_facecolor("#191414")
     ax2.tick_params(colors="white")
-    ax2.xaxis.set_label_coords(0.5, -0.05)
     ax2.xaxis.label.set_color("white")
     st.pyplot(fig2)
