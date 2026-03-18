@@ -87,8 +87,10 @@ elif page == "Popularity Analysis":
             round(correlation, 3)
         )
 
-        st.write("\n \n") # Add some vertical space
+        st.divider()
+#        st.write("\n \n") # Add some vertical space
 
+        # Add an insight box to fill the space
         st.markdown(
             """
             **Insight 💡**  
@@ -96,16 +98,18 @@ elif page == "Popularity Analysis":
             However, some artists significantly over- or under-perform relative to their audience size.
             """
         )
-
+    # Plot the scatter plot in the second column
     with col2:
         st.pyplot(plot_popularity_vs_followers(df))
 
+    # Add a divider and section for over-performers and legacy artists
     st.divider()
     st.subheader("Over-performers and Legacy Artists")
     
-
+    # Get the over-performers and legacy artists
     over_performers, legacy_artists = get_overperformers_and_legacy(df)
 
+    # Style the over-performers table
     styled_over = (
         over_performers
         .reset_index(drop=True)
@@ -126,7 +130,7 @@ elif page == "Popularity Analysis":
         ])
     )
 
-
+    # Style the legacy artists table
     styled_legacy = (
         legacy_artists
         .reset_index(drop=True)
@@ -147,7 +151,7 @@ elif page == "Popularity Analysis":
         ])
     )
 
-
+    # Display the plot and tables side by side
     left_col, right_col = st.columns([1.8, 1])
 
     with left_col:
