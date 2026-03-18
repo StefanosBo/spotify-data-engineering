@@ -1,10 +1,16 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import sqlite3 as sql
-import matplotlib.pyplot as plt
-import statsmodels.formula.api as smf
-from collections import Counter
+from part1_functions import (
+    load_data,
+    plot_popularity,
+    plot_followers,
+    get_correlation,
+    plot_popularity_vs_followers,
+    get_overperformers_and_legacy,
+    plot_overperformers_legacy
+)
+import part1_functions
+print(dir(part1_functions))
+df = load_data()
 
 # Page config
 st.set_page_config(page_title="Spotify Dashboard", page_icon="🎵", layout="wide")
@@ -24,32 +30,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Load data
-@st.cache_data
-def load_data():
-    df = pd.read_csv("data/artist_data.csv")
-    df = df[(df["followers"] > 0) & (df["artist_popularity"] > 0) & (df["name"] != "Various Artists")]
-    df["log_followers"] = np.log1p(df["followers"])
-    return df
-
-
-@st.cache_data
-def load_db():
-    conn = sql.connect("data/spotify_database.db")
-    tracks = pd.read_sql("SELECT * FROM tracks_data", conn)
-    albums = pd.read_sql("SELECT * FROM albums_data", conn)
-    conn.close()
-    return tracks, albums
-
 df = load_data()
-tracks, albums = load_db()
 
 # Sidebar navigation
-page = st.sidebar.selectbox("Navigate", ["Overview", "Genre Explorer", "Artist Search"])
+page = st.sidebar.selectbox(
+    "Navigate",
+    ["Overview", "Popularity Analysis", "Genre Explorer", "Artist Search"]
+)
 
+# Overview page
 if page == "Overview":
     st.title("🎵 Spotify Artist Dashboard")
     st.write("General statistics of the dataset")
+
+elif page == "Popularity Analysis":
+    st.title("📈 Popularity Analysis")
 
 elif page == "Genre Explorer":
     st.title("🎸 Genre Explorer")
@@ -67,45 +62,119 @@ if page == "Overview":
 
     st.divider()
 
-# Itried doing it with functions but i cant get this to work anyone has any ideas?
-#from intro.py import plot_top_popularity, plot_top_followers
+    # Plots
+    col1, col2 = st.columns(2)
 
-#import sys
-#sys.path.append("part1")
-#from intro import plot_popularity, plot_followers
+    with col1:
+        st.pyplot(plot_popularity(df))
 
-#import sys
-#import os
-#sys.path.append(os.path.join(os.path.dirname(__file__), "..", "part1"))
-#from intro.py import plot_popularity, plot_followers
+    with col2:    
+        st.pyplot(plot_followers(df))
 
-col_left, col_right = st.columns(2)
+# Popularity analysis page
+elif page == "Popularity Analysis":
 
-# Top 10 by popularity
-with col_left:
-    st.subheader("Top 10 Artists by Popularity")
-    top_popularity = df.nlargest(10, "artist_popularity")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.barh(top_popularity["name"], top_popularity["artist_popularity"], color="#1DB954")
-    ax.set_xlabel("Popularity score (0-100)")
-    ax.invert_yaxis()
-    fig.patch.set_facecolor("#191414")
-    ax.set_facecolor("#191414")
-    ax.tick_params(colors="white")
-    ax.xaxis.label.set_color("white")
-    st.pyplot(fig)
+    correlation = get_correlation(df)
 
-# Top 10 by followers
-with col_right:
-    st.subheader("Top 10 Artists by Followers")
-    top_followers = df.nlargest(10, "followers").copy()
-    top_followers["followers_m"] = top_followers["followers"] / 1_000_000
-    fig2, ax2 = plt.subplots(figsize=(10, 5))
-    ax2.barh(top_followers["name"], top_followers["followers_m"], color="#1DB954")
-    ax2.set_xlabel("Followers (millions)")
-    ax2.invert_yaxis()
-    fig2.patch.set_facecolor("#191414")
-    ax2.set_facecolor("#191414")
-    ax2.tick_params(colors="white")
-    ax2.xaxis.label.set_color("white")
-    st.pyplot(fig2)
+    st.divider()
+    st.subheader("Popularity vs Followers")
+
+    # Create two columns for the metric and the plot
+    col1, spacer, col2 = st.columns([1, 0.2, 2])
+    with col1:
+        st.metric(
+            "Correlation between popularity and log followers",
+            round(correlation, 3)
+        )
+
+        st.write("\n \n") # Add some vertical space
+
+        st.markdown(
+            """
+            **Insight 💡**  
+            There is a strong positive relationship between followers and popularity.  
+            However, some artists significantly over- or under-perform relative to their audience size.
+            """
+        )
+
+    with col2:
+        st.pyplot(plot_popularity_vs_followers(df))
+
+    st.divider()
+    st.subheader("Over-performers and Legacy Artists")
+    
+
+    over_performers, legacy_artists = get_overperformers_and_legacy(df)
+
+    styled_over = (
+        over_performers
+        .reset_index(drop=True)
+        [["name", "artist_popularity", "followers"]]
+        .rename(columns={
+            "artist_popularity": "Popularity",
+            "followers": "Followers"
+        })
+        .style
+        .set_properties(**{
+            "background-color": "#191414",
+            "color": "white",
+            "border-color": "#1DB954"
+        })
+        .set_table_styles([
+            {"selector": "th", "props": [("background-color", "#1DB954"), ("color", "white")]},
+            {"selector": "td", "props": [("border", "1px solid #1DB954")]}
+        ])
+    )
+
+
+    styled_legacy = (
+        legacy_artists
+        .reset_index(drop=True)
+        [["name", "artist_popularity", "followers"]]
+        .rename(columns={
+            "artist_popularity": "Popularity",
+            "followers": "Followers"
+        })
+        .style
+        .set_properties(**{
+            "background-color": "#191414",
+            "color": "white",
+            "border-color": "#1DB954"
+        })
+        .set_table_styles([
+            {"selector": "th", "props": [("background-color", "#1DB954"), ("color", "white")]},
+            {"selector": "td", "props": [("border", "1px solid #1DB954")]}
+        ])
+    )
+
+
+    left_col, right_col = st.columns([1.8, 1])
+
+    with left_col:
+        st.subheader("Model View")
+        st.pyplot(plot_overperformers_legacy(df))
+
+    with right_col:
+        st.subheader("Top 10 Over-performers")
+
+        st.markdown(
+            f"""
+            <div style="height:200px; overflow-y:auto;">
+                {styled_over.to_html()}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
+        st.subheader("Top 10 Legacy Artists")
+
+        st.markdown(
+            f"""
+            <div style="height:200px; overflow-y:auto;">
+                {styled_legacy.to_html()}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
