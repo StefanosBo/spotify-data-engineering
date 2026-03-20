@@ -4,6 +4,9 @@ import seaborn as sns
 from db_utils import get_data
 
 def analyze_explicit_tracks():
+    """Analyze explicit vs clean track popularity and find artists with
+    the highest proportion of explicit tracks.
+    Returns (avg_popularity, top_explicit_artists, figure)."""
     print("--- Are explicit tracks more popular? ---")
     query_explicit = """
     SELECT 
@@ -11,7 +14,6 @@ def analyze_explicit_tracks():
         track_popularity 
     FROM tracks_data
     """
-    
 
     df_explicit = get_data(query_explicit)
     
@@ -19,14 +21,11 @@ def analyze_explicit_tracks():
     print("Average Popularity by Explicit Status:")
     print(avg_popularity.to_string(index=False))
     
-    plt.figure(figsize=(6, 4))
-    sns.barplot(data=df_explicit, x='explicit', y='track_popularity', errorbar=None)
-    plt.title("Average Popularity: Explicit vs. Clean Tracks")
-    plt.xlabel("Is Explicit (1 = Yes, 0 = No)")
-    plt.ylabel("Average Popularity")
-    plt.show()
-    plt.savefig("explicit_vs_popularity.png")
-    
+    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.barplot(data=df_explicit, x='explicit', y='track_popularity', errorbar=None, ax=ax)
+    ax.set_title("Average Popularity: Explicit vs. Clean Tracks")
+    ax.set_xlabel("Is Explicit (1 = Yes, 0 = No)")
+    ax.set_ylabel("Average Popularity")
     
     print("\n--- Which artists have the highest proportion of explicit tracks? ---")
     query_proportion = """
@@ -45,7 +44,6 @@ def analyze_explicit_tracks():
         total_tracks=('explicit', 'count'),
         explicit_tracks=('explicit', 'sum')
     ).reset_index()
-    print(artist_stats.head())
     artist_stats['explicit_proportion'] = artist_stats['explicit_tracks'] / artist_stats['total_tracks']
     
     artist_stats_filtered = artist_stats[artist_stats['total_tracks'] >= 5]
@@ -55,6 +53,10 @@ def analyze_explicit_tracks():
     print("Top 10 Artists with the Highest Proportion of Explicit Tracks (min. 5 tracks):")
     print(top_explicit_artists[['name', 'explicit_proportion', 'total_tracks']].to_string(index=False))
 
+    return avg_popularity, top_explicit_artists, fig
+
 
 if __name__ == "__main__":
-    analyze_explicit_tracks()
+    avg_pop, top_artists, fig = analyze_explicit_tracks()
+    plt.show()
+    fig.savefig("explicit_vs_popularity.png")

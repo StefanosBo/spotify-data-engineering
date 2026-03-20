@@ -4,7 +4,8 @@ import seaborn as sns
 from db_utils import get_data
 
 def analyze_album_consistency(album_name="The Dark Side Of The Moon"):
-    # SQL query to join albums_data and features_data on track_id
+    """Analyze feature consistency for tracks on an album.
+    Returns (DataFrame, figure) so the dashboard can display them."""
     query = f"""
         SELECT 
             a.album_name,
@@ -16,7 +17,6 @@ def analyze_album_consistency(album_name="The Dark Side Of The Moon"):
         WHERE a.album_name = '{album_name}'
     """
 
-    
     df_album = get_data(query)
     print(df_album.head(20))
     
@@ -24,11 +24,13 @@ def analyze_album_consistency(album_name="The Dark Side Of The Moon"):
     print(df_album.describe())
     
     # Visualization
-    plt.figure(figsize=(10, 5))
-    sns.boxplot(data=df_album[['danceability', 'loudness']])
-    plt.title(f"Consistency of Features: {album_name}")
-    plt.show()
-    plt.savefig(f"{album_name}_consistency.png")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(data=df_album[['danceability', 'loudness']], ax=ax)
+    ax.set_title(f"Consistency of Features: {album_name}")
+
+    return df_album, fig
 
 if __name__ == "__main__":
-    analyze_album_consistency()
+    df, fig = analyze_album_consistency()
+    plt.show()
+    fig.savefig(f"The Dark Side Of The Moon_consistency.png")

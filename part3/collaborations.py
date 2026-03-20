@@ -4,6 +4,8 @@ import seaborn as sns
 from db_utils import get_data
 
 def analyze_collaborations():
+    """Analyze whether collaborations are more popular than solo tracks.
+    Returns (df_collab, avg_popularity, figure)."""
     print("--- Question: Are collaborations more popular? ---")
     
     query_collab = """
@@ -15,11 +17,9 @@ def analyze_collaborations():
     JOIN albums_data a ON t.id = a.track_id
     """
     
-    
     df_collab = get_data(query_collab)
 
     df_collab['is_collab'] = df_collab['artist_1'].notna() & (df_collab['artist_1'] != '')
-    
     df_collab['is_collab'] = df_collab['is_collab'].astype(int)
     
     avg_popularity = df_collab.groupby('is_collab').agg(
@@ -33,21 +33,23 @@ def analyze_collaborations():
     print(avg_popularity[['Track Type', 'average_popularity', 'total_tracks']].to_string(index=False))
     
     # --- Visualization ---
-    plt.figure(figsize=(7, 5))
+    fig, ax = plt.subplots(figsize=(7, 5))
     sns.barplot(
         data=avg_popularity, 
         x='Track Type', 
         y='average_popularity', 
-        palette=['#1DB954', '#191414'] # Spotify colors!
+        palette=['#1DB954', '#191414'],
+        ax=ax
     )
-    plt.title("Popularity of Solo Tracks vs. Collaborations")
-    plt.ylabel("Average Popularity")
+    ax.set_title("Popularity of Solo Tracks vs. Collaborations")
+    ax.set_ylabel("Average Popularity")
     
     for index, row in avg_popularity.iterrows():
-        plt.text(index, row.average_popularity + 0.5, round(row.average_popularity, 2), color='black', ha="center")
-        
-    plt.show()
-    plt.savefig("collaborations_popularity_comparison.png")
+        ax.text(index, row.average_popularity + 0.5, round(row.average_popularity, 2), color='black', ha="center")
+
+    return df_collab, avg_popularity, fig
         
 if __name__ == "__main__":
-    analyze_collaborations()
+    df_collab, avg_popularity, fig = analyze_collaborations()
+    plt.show()
+    fig.savefig("collaborations_popularity_comparison.png")

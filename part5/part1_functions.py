@@ -7,7 +7,12 @@ from collections import Counter
 
 # Function for loading the data
 def load_data():
-    df = pd.read_csv("../data/artist_data.csv")
+    import os
+    csv_path = "../data/artist_data.csv"
+    if not os.path.exists(csv_path):
+        _this_dir = os.path.dirname(os.path.abspath(__file__))
+        csv_path = os.path.join(os.path.dirname(_this_dir), "data", "artist_data.csv")
+    df = pd.read_csv(csv_path)
     # Filter out junk data
     df = df[(df["followers"] > 0) & (df["artist_popularity"] > 0) & (df["name"] != "Various Artists")].copy()
     return df
