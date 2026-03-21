@@ -20,7 +20,7 @@ This project performs exploratory data analysis on Spotify data to uncover insig
 
 Install all dependencies (PowerShell or cmd):
 ```powershell
-py -m pip install pandas matplotlib numpy statsmodels seaborn
+py -m pip install pandas matplotlib numpy statsmodels seaborn streamlit plotly
 ```
 
 ## Data Expectations for the Whole Project
