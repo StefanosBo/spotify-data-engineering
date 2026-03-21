@@ -5,6 +5,7 @@
 - Part 1: Artist Analysis
 - Part 3: Database Analysis
 - Part 4: Data Wrangling 
+- Part 5: Dashboard
 
 ## Project Overview
 This project performs exploratory data analysis on Spotify data to uncover insights about artists, albums, tracks, and their popularity metrics. It consists of multiple parts analyzing different aspects of the data.
@@ -121,5 +122,28 @@ py part4\spotify_wrangle.py
 
 ---
 
-# Part 5: 
+## Part 5: Spotify Analytics Dashboard (part5/dashboard.py)
 
+### Overview
+This part creates an interactive web dashboard using Streamlit and Plotly to visualize and explore the Spotify data analyses performed in previous parts. The dashboard integrates insights from:
+- Part 1: Artist popularity and followers analysis
+- Part 3: Database queries for album features, collaborations, popularity correlations, eras, and explicit content
+- Part 4: Data wrangling, outlier detection, and time-series trends
+
+The dashboard features multiple pages for different analyses, including overview statistics, popularity analysis, genre exploration, artist search, album features, collaborations, era analysis, and explicit content insights. It uses Spotify-themed styling with dark backgrounds and green accents.
+
+### How to run
+```powershell
+streamlit run part5\dashboard.py
+```
+
+### Data expectations
+- Artist data: `data/artist_data.csv` (from Part 1)
+- SQLite database: `part3/spotify_database.db` (from Parts 3 and 4)
+- Most tables and columns as previous parts
+
+### Outputs generated
+- Interactive web application with multiple tabs
+- Dynamic plots and charts using Plotly
+- Styled tables and metrics with Spotify branding
+- Real-time filtering and exploration capabilities
