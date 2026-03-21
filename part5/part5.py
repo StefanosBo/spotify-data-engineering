@@ -180,13 +180,9 @@ elif page == "Popularity Analysis":
         st.subheader("Top 10 Over-performers")
 
         st.markdown(
-            f"""
-            <div style="height:200px; overflow-y:auto;">
-                {styled_over.to_html()}
-            </div>
-            """,
+            f'<div style="height:200px; overflow-y:auto;">{styled_over.to_html()}</div>',
             unsafe_allow_html=True
-        ) # Display the over-performers table in a scrollable div
+        )   # Display the over-performers table in a scrollable div
 
         st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
@@ -194,12 +190,8 @@ elif page == "Popularity Analysis":
 
         # scrollable table for legacy artists
         st.markdown(
-            f"""
-            <div style="height:200px; overflow-y:auto;">
-                {styled_legacy.to_html()}
-            </div>
-            """,
-            unsafe_allow_html=True 
+            f'<div style="height:200px; overflow-y:auto;">{styled_legacy.to_html()}</div>',
+            unsafe_allow_html=True
         ) 
 
     st.divider()
@@ -209,7 +201,7 @@ elif page == "Popularity Analysis":
 
     genre_summary = get_num_genres_summary(df)
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3) # Create three columns for the summary metrics
 
     # Display the summary metrics for number of genres and correlations
     with col1:

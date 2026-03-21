@@ -36,11 +36,13 @@ from part1_functions import (
     plot_popularity,
     plot_followers,
     get_correlation,
-    fit_model,
-    add_log_followers,
     plot_popularity_vs_followers,
     get_overperformers_and_legacy,
     plot_overperformers_legacy,
+    get_num_genres_summary,
+    plot_num_genres_vs_popularity,
+    plot_num_genres_vs_followers,
+    plot_follower_groups_vs_popularity,
 )
 
 # ──────────────────────────────────────────────────────────────────
@@ -60,16 +62,9 @@ from spotify_wrangle import (
     load_all_tables,
     clean_data,
     detect_outliers_iqr,
-    assign_era,
     add_era_column,
     album_feature_summary,
-    get_feature_trends,
     get_era_features,
-    plot_era_features,
-    get_yearly_popularity,
-    find_genre_pairs,
-    find_duplicate_artists,
-    label_tracks_by_feature,
 )
 
 # ──────────────────────────────────────────────────────────────────
@@ -91,6 +86,7 @@ DARK_CSS = """
 <style>
     .stApp { background-color: #191414; color: white; }
     [data-testid="stSidebar"] { background-color: #121212; }
+    [data-testid="stSidebar"] * { color: white !important; }
     [data-testid="stMetric"] {
         background-color: #1DB954; border-radius: 10px; padding: 10px;
     }
@@ -139,7 +135,7 @@ def cached_clean_data(_tracks, _features, _albums):
 # ══════════════════════════════════════════════════════════════════
 def page_overview():
     st.title("🎵 Spotify Database Overview")
-    st.markdown("Key statistics from the research carried out across Parts 1–4.")
+    st.markdown("Key statistics from the research carried out throughout the project.")
 
     # Part 1: artist-level stats
     df = cached_load_artist_data()
@@ -167,7 +163,7 @@ def page_overview():
     st.divider()
 
     # Graphical summary: Part 1 matplotlib plots
-    st.subheader("Top Artists (Part 1)")
+    st.subheader("Top Artists")
     col1, col2 = st.columns(2)
     with col1:
         st.pyplot(plot_popularity(df))      # Part 1
@@ -396,7 +392,7 @@ def page_artist_search():
     # Part 1 correlation
     df_artists = cached_load_artist_data()
     corr = get_correlation(df_artists)
-    st.caption(f"ℹ️ Overall popularity–followers correlation (Part 1): **{corr:.3f}**")
+    st.caption(f"ℹ️ Overall popularity-followers correlation: **{corr:.3f}**")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -527,7 +523,7 @@ def page_time_analysis():
             st.plotly_chart(fig, use_container_width=True)
 
     # Era comparison — uses Part 4 assign_era + get_era_features
-    st.subheader("Era Comparison (Part 4)")
+    st.subheader("Era Comparison")
     tracks, features, artists, albums = cached_load_all()
     t_clean, f_clean, a_clean = cached_clean_data(tracks, features, albums)
     a_clean = add_era_column(a_clean)       # Part 4
@@ -556,11 +552,11 @@ def page_deep_dive():
     st.title("🔬 Deep Dive Analyses")
     st.sidebar.header("Analysis Selection")
     analysis = st.sidebar.radio("Choose Analysis", [
-        "Over-Performers & Legacy (Part 1)",
-        "Outlier Detection (Part 4)",
-        "Album Feature Summary (Part 4)",
-        "Collaboration Analysis (Part 3)",
-        "Album Consistency (Part 3)",
+        "Over-Performers & Legacy",
+        "Outlier Detection",
+        "Album Feature Summary",
+        "Collaboration Analysis",
+        "Album Consistency Analysis",
     ])
     if   analysis.startswith("Over"):   _deep_overperformers()
     elif analysis.startswith("Outlier"): _deep_outliers()
@@ -568,33 +564,150 @@ def page_deep_dive():
     elif analysis.startswith("Collab"):  _deep_collaboration()
     else:                                _deep_album_consistency()
 
-
+# Over-performers & legacy artists 
 def _deep_overperformers():
-    """Directly uses Part 1 functions."""
-    st.subheader("Over-Performers & Legacy Artists")
-    st.markdown("Using the OLS regression model from **Part 1**.")
     df = cached_load_artist_data()
+    correlation = get_correlation(df)
 
-    corr = get_correlation(df)              # Part 1
-    st.metric("Popularity–Followers Correlation", f"{corr:.3f}")
+    st.divider()
+    st.subheader("Popularity vs Followers")
 
-    col1, col2 = st.columns(2)
+    col1, spacer, col2 = st.columns([1, 0.2, 2])
+
     with col1:
-        st.pyplot(plot_popularity_vs_followers(df))   # Part 1
+        st.metric(
+            "Correlation between popularity and log followers",
+            f"{correlation:.3f}"
+        )
+
+        st.write("")
+        st.write("")
+
+        st.markdown(
+            """
+            **Insight 💡**  
+            There is a strong positive relationship between followers and popularity.  
+            However, some artists significantly over- or under-perform relative to their audience size.
+            """
+        )
+
     with col2:
-        st.pyplot(plot_overperformers_legacy(df))     # Part 1
+        st.pyplot(plot_popularity_vs_followers(df))
 
-    over, legacy = get_overperformers_and_legacy(df)  # Part 1
-    col3, col4 = st.columns(2)
-    with col3:
-        st.subheader("Top 10 Over-Performers")
-        st.dataframe(over[["name", "artist_popularity", "followers"]].reset_index(drop=True),
-                      use_container_width=True, hide_index=True)
-    with col4:
+    st.divider()
+
+    st.subheader("Over-performers and Legacy Artists")
+
+    over_performers, legacy_artists = get_overperformers_and_legacy(df)
+
+    over_df = over_performers.reset_index(drop=True)
+    over_df.index += 1
+    over_df.index.name = "#"
+
+# Style the over-performers table
+    styled_over = (
+        over_df
+        [["name", "artist_popularity", "followers"]]
+        .rename(columns={
+            "artist_popularity": "Popularity",
+            "followers": "Followers"
+        }) # Format the table with renamed columns and only relevant info
+        .style
+        .set_properties(**{
+            "background-color": "#191414",
+            "color": "white",
+            "border-color": "#1DB954"
+        }) # Set dark background and green borders for the table
+        .set_table_styles([
+            {"selector": "th", "props": [("background-color", "#1DB954"), ("color", "white")]},
+            {"selector": "td", "props": [("border", "1px solid #1DB954")]}
+        ]) # Style the header and cells with Spotify green and white text
+    )
+
+    # Prepare dataframe first
+    legacy_df = legacy_artists.reset_index(drop=True)
+    legacy_df.index += 1
+    legacy_df.index.name = "#"
+
+    # Style the legacy artists table
+    styled_legacy = (
+        legacy_df
+        [["name", "artist_popularity", "followers"]]
+        .rename(columns={
+            "artist_popularity": "Popularity",
+            "followers": "Followers"
+        })
+        .style
+        .set_properties(**{
+            "background-color": "#191414",
+            "color": "white",
+            "border-color": "#1DB954"
+        })
+        .set_table_styles([
+            {"selector": "th", "props": [("background-color", "#1DB954"), ("color", "white")]},
+            {"selector": "td", "props": [("border", "1px solid #1DB954")]}
+        ])
+    )
+
+    # Display the plot and tables side by side
+    left_col, right_col = st.columns([1.8, 1])
+
+    with left_col:
+        st.subheader("Model View")
+        st.pyplot(plot_overperformers_legacy(df)) # Plot the over-performers and legacy artists in the left column
+
+    with right_col:
+        st.subheader("Top 10 Over-performers")
+
+        st.markdown(
+            f'<div style="height:200px; overflow-y:auto;">{styled_over.to_html()}</div>',
+            unsafe_allow_html=True
+        )   # Display the over-performers table in a scrollable div
+
+        st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
         st.subheader("Top 10 Legacy Artists")
-        st.dataframe(legacy[["name", "artist_popularity", "followers"]].reset_index(drop=True),
-                      use_container_width=True, hide_index=True)
 
+        # scrollable table for legacy artists
+        st.markdown(
+            f'<div style="height:200px; overflow-y:auto;">{styled_legacy.to_html()}</div>',
+            unsafe_allow_html=True
+        ) 
+
+    st.divider()
+
+        # Add a section for genre breadth analysis
+    st.subheader("Genre Breadth Analysis")
+
+    genre_summary = get_num_genres_summary(df)
+
+    col1, col2, col3 = st.columns(3) # Create three columns for the summary metrics
+
+    # Display the summary metrics for number of genres and correlations
+    with col1:
+        st.metric("Average # of Genres", round(genre_summary["mean_num_genres"], 2))
+
+    with col2:
+        st.metric("Correlation with Popularity", round(genre_summary["corr_popularity"], 3))
+
+    with col3:
+        st.metric("Correlation with Followers", round(genre_summary["corr_followers"], 3))
+
+    st.markdown("<div style='height:15px;'></div>", unsafe_allow_html=True)
+
+    col4, col5 = st.columns(2)
+
+    # Plot the number of genres vs popularity 
+    with col4:
+        st.pyplot(plot_num_genres_vs_popularity(df))
+
+    # Plot the number of genres vs followers
+    with col5:
+        st.pyplot(plot_num_genres_vs_followers(df))
+
+    st.markdown("<div style='height:15px;'></div>", unsafe_allow_html=True)
+
+    st.pyplot(plot_follower_groups_vs_popularity(df))
 
 def _deep_outliers():
     """Directly uses Part 4 detect_outliers_iqr."""
