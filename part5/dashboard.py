@@ -5,6 +5,59 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+import base64
+import requests
+
+def fmt(n):
+    if n >= 1_000_000: return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:     return f"{n / 1_000:.1f}K"
+    return str(int(n))
+def get_spotify_access_token():
+    client_id = st.secrets["spotify"]["client_id"]
+    client_secret = st.secrets["spotify"]["client_secret"]
+
+    auth_string = f"{client_id}:{client_secret}"
+    auth_b64 = base64.b64encode(auth_string.encode("utf-8")).decode("utf-8")
+
+    response = requests.post(
+        "https://accounts.spotify.com/api/token",
+        headers={
+            "Authorization": f"Basic {auth_b64}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        data={"grant_type": "client_credentials"},
+        timeout=15,
+    )
+    response.raise_for_status()
+    return response.json()["access_token"]
+
+
+def get_artist_spotify_image(artist_name):
+    try:
+        token = get_spotify_access_token()
+        if not token:
+            return None, None
+
+        response = requests.get(
+            "https://api.spotify.com/v1/search",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"q": artist_name, "type": "artist", "limit": 1},
+            timeout=15,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        items = data.get("artists", {}).get("items", [])
+        if not items:
+            return None, None
+
+        artist = items[0]
+        image_url = artist["images"][0]["url"] if artist.get("images") else None
+        spotify_url = artist.get("external_urls", {}).get("spotify")
+        return image_url, spotify_url
+
+    except Exception:
+        return None, None
 
 # ──────────────────────────────────────────────────────────────────
 # Path setup - make all project parts importable 
@@ -404,18 +457,31 @@ def page_artist_search():
     """)
 
     st.sidebar.header("Artist Selection")
+
     selected_name = st.sidebar.selectbox("Search Artist", artists["name"].tolist())
     row = artists[artists["name"] == selected_name].iloc[0]
     aid = row["id"]
+    artist_image_url, artist_spotify_url = get_artist_spotify_image(selected_name)
 
     # KPIs via Part 3 get_data
     ts = get_data("SELECT COUNT(*) AS tracks, COUNT(DISTINCT album_id) AS albums "
                   "FROM albums_data WHERE artist_id = ?", (aid,))
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Popularity", int(row["artist_popularity"]))
-    c2.metric("Followers", fmt(row["followers"]))
-    c3.metric("Tracks", int(ts["tracks"][0]))
-    c4.metric("Albums", int(ts["albums"][0]))
+
+    left_col, right_col = st.columns([1, 3])
+
+    with left_col:
+        if artist_image_url:
+            st.image(artist_image_url, use_container_width=True)
+
+    with right_col:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Popularity", int(row["artist_popularity"]))
+        c2.metric("Followers", fmt(row["followers"]))
+        c3.metric("Tracks", int(ts["tracks"][0]))
+        c4.metric("Albums", int(ts["albums"][0]))
+
+        if artist_spotify_url:
+            st.markdown(f"[Open artist on Spotify]({artist_spotify_url})")
 
     gr = get_data("SELECT artist_genres FROM artist_data WHERE id = ?", (aid,))
     st.markdown(f"**Genres:** {gr['artist_genres'][0]}")
@@ -449,8 +515,13 @@ def page_artist_search():
         if not feat.empty:
             vals = [feat[c][0] if feat[c][0] is not None else 0 for c in AUDIO_FEATURES]
             fig = go.Figure()
-            fig.add_trace(go.Scatterpolar(r=vals+[vals[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
-                                          fill="toself", name=selected_name, line_color=SPOTIFY_GREEN))
+            fig.add_trace(go.Scatterpolar(
+                r=vals + [vals[0]],
+                theta=AUDIO_FEATURES + [AUDIO_FEATURES[0]],
+                fill="toself",
+                name=selected_name,
+                line_color=SPOTIFY_GREEN
+            ))
             style_fig(fig, f"Audio Profile - {selected_name}")
             fig.update_layout(polar=dict(radialaxis=dict(range=[0, 1])))
             st.plotly_chart(fig, use_container_width=True)
@@ -478,7 +549,6 @@ def page_artist_search():
     """, (aid,))
     if not top_tracks.empty:
         st.dataframe(top_tracks, use_container_width=True, hide_index=True)
-
 
 # ══════════════════════════════════════════════════════════════════
 # PAGE 4: TIME ANALYSIS
