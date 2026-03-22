@@ -1,15 +1,3 @@
-"""
-Part 5: Spotify Analytics Dashboard
-=====================================
-This dashboard reuses functions from earlier parts of the project:
-  - Part 1 (part1_functions.py): Artist exploratory analysis
-  - Part 3 (db_utils, album_features, collaborations, task_eras,
-            task_explicit_collabs, popularity): Database queries & analysis
-  - Part 4 (spotify_wrangle): Data wrangling, outlier detection, era analysis
-
-Run with:  streamlit run dashboard.py
-"""
-
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -51,9 +39,6 @@ from part1_functions import (
 from db_utils import get_data
 from album_features import analyze_album_consistency
 from collaborations import analyze_collaborations
-from task_eras import categorize_eras
-from task_explicit_collabs import analyze_explicit_tracks
-from popularity import analyze_popularity
 
 # ──────────────────────────────────────────────────────────────────
 # Part 4 imports
@@ -713,7 +698,6 @@ def _deep_overperformers():
 def _deep_outliers():
     """Directly uses Part 4 detect_outliers_iqr."""
     st.subheader("Outlier Detection (IQR Method)")
-    st.markdown("Using `detect_outliers_iqr()` from **Part 4**.")
 
     feature = st.selectbox("Select Feature", AUDIO_FEATURES_FULL)
 
@@ -754,9 +738,7 @@ def _deep_outliers():
 
 
 def _deep_album_summary():
-    """Directly uses Part 4 album_feature_summary."""
     st.subheader("Album Feature Summary")
-    st.markdown("Using `album_feature_summary()` from **Part 4**.")
 
     albums = get_data("""
         SELECT DISTINCT album_name, album_popularity
@@ -811,9 +793,7 @@ def _deep_album_summary():
 
 
 def _deep_collaboration():
-    """Directly uses Part 3 analyze_collaborations."""
     st.subheader("Collaboration Analysis")
-    st.markdown("Using `analyze_collaborations()` from **Part 3**.")
 
     df_collab, avg_popularity, fig_collab = analyze_collaborations()  # Part 3
 
@@ -836,9 +816,7 @@ def _deep_collaboration():
 
 
 def _deep_album_consistency():
-    """Directly uses Part 3 analyze_album_consistency."""
     st.subheader("Album Feature Consistency")
-    st.markdown("Using `analyze_album_consistency()` from **Part 3**.")
 
     album_name = st.text_input("Enter album name", "The Dark Side Of The Moon")
     if album_name:
