@@ -71,18 +71,57 @@ AUDIO_FEATURES_FULL = AUDIO_FEATURES + ["loudness", "tempo"]
 
 DARK_CSS = """
 <style>
-    .stApp { background-color: #191414; color: white; }
-    [data-testid="stSidebar"] { background-color: #121212; }
-    [data-testid="stSidebar"] * { color: white !important; }
-    [data-testid="stMetric"] {
-        background-color: #1DB954; border-radius: 10px; padding: 10px;
+    .stApp {
+        background-color: #191414;
+        color: white;
     }
+
+    [data-testid="stSidebar"] {
+        background-color: #121212;
+        min-width: 320px !important;
+        max-width: 320px !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+    [data-testid="stMetric"] {
+        background-color: #1DB954;
+        border-radius: 10px;
+        padding: 10px;
+    }
+
     [data-testid="stMetricLabel"],
-    [data-testid="stMetricValue"] { color: white !important; }
-    h1, h2, h3 { color: white !important; }
+    [data-testid="stMetricValue"] {
+        color: white !important;
+    }
+
+    h1, h2, h3 {
+        color: white !important;
+    }
+
+    .stButton > button {
+        background-color: transparent !important;
+        color: white !important;
+        border: none !important;
+        text-align: left !important;
+        font-size: 18px !important;
+        padding: 6px 0 !important;
+        box-shadow: none !important;
+    }
+
+    .stButton > button:hover {
+        color: #1DB954 !important;
+        background-color: transparent !important;
+    }
+
+    .stButton > button:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
 </style>
 """
-
 def style_fig(fig, title="", height=450):
     fig.update_layout(
         title=dict(text=title, font=dict(size=18, color="white")),
@@ -120,13 +159,19 @@ def cached_clean_data(_tracks, _features, _albums):
 #       Part 3 (get_data for DB-level stats)
 # ══════════════════════════════════════════════════════════════════
 def page_overview():
-    st.title("🎵 Spotify Database Overview")
-    st.markdown("Key statistics from the research carried out throughout the project.")
+    col1, col2 = st.columns([1, 6])
+
+    with col1:
+        st.image("part5/Spotify_Primary_Logo_RGB_Green.png", width=90)
+
+    with col2:
+        st.title("Spotify Database Overview")
+        st.markdown("Key statistics from the research carried out throughout the project.")
 
     # Part 1: artist-level stats
     df = cached_load_artist_data()
-    top_pop = get_top_popularity(df)        # Part 1
-    top_fol = get_top_followers(df)         # Part 1
+    top_pop = get_top_popularity(df)       
+    top_fol = get_top_followers(df)         
 
     # Part 3: database-level stats via get_data
     stats = get_data("""
@@ -841,22 +886,40 @@ def _deep_album_consistency():
 def main():
     st.set_page_config(
         page_title="Spotify Analytics Dashboard",
-        page_icon="🎵", layout="wide",
+        page_icon="🎵",
+        layout="wide",
         initial_sidebar_state="expanded",
     )
+
     st.markdown(DARK_CSS, unsafe_allow_html=True)
 
     pages = {
-        "📊 Overview": page_overview,
-        "🔍 Features & Genres": page_feature_genre,
-        "🔎 Artist Search": page_artist_search,
-        "⏳ Music Through Time": page_time_analysis,
-        "🔬 Deep Dive": page_deep_dive,
+        "Overview": ("overview.png", page_overview),
+        "Features & Genres": ("featuresandgenres.png", page_feature_genre),
+        "Artist Search": ("artistsearch.png", page_artist_search),
+        "Music Through Time": ("timeanalysis.png", page_time_analysis),
+        "Deep Dive": ("deepdrive.png", page_deep_dive),
     }
-    st.sidebar.title("🎵 Spotify Analytics")
-    selection = st.sidebar.radio("Navigate", list(pages.keys()))
-    pages[selection]()
 
+    st.sidebar.image("part5/Spotify_Full_Logo_RGB_White.png", width="stretch")
+    st.sidebar.markdown("### Navigate")
+
+    if "selected_page" not in st.session_state:
+        st.session_state.selected_page = "Overview"
+
+    for page_name, (icon_file, page_func) in pages.items():
+        col1, col2 = st.sidebar.columns([1, 5])
+
+        with col1:
+            st.image(f"part5/{icon_file}", width=22)
+
+        with col2:
+            if st.button(page_name, key=page_name, use_container_width=True):
+                st.session_state.selected_page = page_name
+
+    st.sidebar.markdown("---")
+
+    pages[st.session_state.selected_page][1]()
 
 if __name__ == "__main__":
     main()
