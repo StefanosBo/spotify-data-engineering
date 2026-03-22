@@ -89,7 +89,7 @@ print("B1 (slope):", model.params["log_followers"], "\n")
 
 # Scatter plot with regression line
 plt.figure(figsize=(10, 5))
-plt.scatter(df["log_followers"], df["artist_popularity"], alpha=0.5)
+plt.scatter(df["log_followers"], df["artist_popularity"], alpha=0.5) # alpha here defines the transparency of the points
 plt.plot(df["log_followers"], model.fittedvalues, color="white") # regression line
 plt.title("Popularity vs Followers")
 plt.xlabel("Followers (log scale)")
@@ -177,10 +177,6 @@ def top_artists_by_genre(genre):
     filtered = get_artists_by_genre(genre)
     print(f"Top 10 artists in genre: {genre}")
     print(filtered[["name", "artist_popularity", "followers"]].to_string(index=False))
-
-# Test it
-top_artists_by_genre("pop")
-top_artists_by_genre("rock")
 
 # Interactive plot to explore genres
 fig, ax = plt.subplots(figsize=(10, 6))

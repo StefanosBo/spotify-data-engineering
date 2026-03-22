@@ -19,7 +19,7 @@ import os
 import sys
 
 # ──────────────────────────────────────────────────────────────────
-# Path setup — make all project parts importable
+# Path setup - make all project parts importable 
 # ──────────────────────────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # part5/
@@ -71,11 +71,13 @@ from spotify_wrangle import (
 # Constants & helpers
 # ──────────────────────────────────────────────────────────────────
 SPOTIFY_GREEN = "#1DB954"
+LIGHT_GREEN = "#1ed760"          
+SOFT_GREEN = "#158f3b"
 SPOTIFY_DARK = "#191414"
 ACCENT_BLUE = "#4A90D9"
 ACCENT_CORAL = "#E8555A"
 ACCENT_PURPLE = "#9B59B6"
-ACCENT_AMBER = "#F39C12"
+ACCENT_AMBER = "#F39C12"           
 PALETTE = [SPOTIFY_GREEN, ACCENT_BLUE, ACCENT_CORAL, ACCENT_PURPLE, ACCENT_AMBER,
            "#2ECC71", "#3498DB", "#E74C3C", "#8E44AD", "#F1C40F"]
 AUDIO_FEATURES = ["danceability", "energy", "speechiness", "acousticness",
@@ -95,7 +97,6 @@ DARK_CSS = """
     h1, h2, h3 { color: white !important; }
 </style>
 """
-
 
 def style_fig(fig, title="", height=450):
     fig.update_layout(
@@ -189,7 +190,7 @@ def page_overview():
             GROUP BY decade ORDER BY decade
         """)
         fig = px.bar(decades, x="decade", y="cnt",
-                     color_discrete_sequence=[ACCENT_BLUE])
+                     color_discrete_sequence=[SPOTIFY_GREEN])
         style_fig(fig, "Tracks by Decade")
         st.plotly_chart(fig, use_container_width=True)
 
@@ -237,7 +238,7 @@ def _explore_feature():
         """, (pop_range[0], pop_range[1]))
         if not scatter.empty:
             fig = px.scatter(scatter, x=selected, y="track_popularity",
-                             color_discrete_sequence=[ACCENT_BLUE], opacity=0.4)
+                             color_discrete_sequence=[SPOTIFY_GREEN], opacity=0.4)
             style_fig(fig, f"{selected.title()} vs Track Popularity")
             valid = scatter[[selected, "track_popularity"]].dropna()
             if len(valid) > 10:
@@ -290,14 +291,14 @@ def _explore_genre():
     with col1:
         fig = px.bar(top, x="artist_popularity", y="name", orientation="h",
                      color_discrete_sequence=[SPOTIFY_GREEN])
-        style_fig(fig, f"Top Artists — {selected_genre}")
+        style_fig(fig, f"Top Artists - {selected_genre}")
         fig.update_yaxes(autorange="reversed", title="")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         if (top["followers"] > 0).any():
             fig = px.scatter(top, x="followers", y="artist_popularity",
                              hover_name="name", log_x=True,
-                             color_discrete_sequence=[ACCENT_BLUE])
+                             color_discrete_sequence=[SPOTIFY_GREEN])
             style_fig(fig, "Popularity vs Followers (log)")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -328,12 +329,12 @@ def _explore_genre():
         fig.add_trace(go.Scatterpolar(r=gv+[gv[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
                                       fill="toself", name=selected_genre, line_color=SPOTIFY_GREEN))
         fig.add_trace(go.Scatterpolar(r=ov_v+[ov_v[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
-                                      fill="toself", name="Overall", line_color=ACCENT_BLUE, opacity=0.4))
-        style_fig(fig, f"Audio Profile — {selected_genre}")
+                                      fill="toself", name="Overall", line_color=SOFT_GREEN, opacity=0.4))
+        style_fig(fig, f"Audio Profile - {selected_genre}")
         fig.update_layout(polar=dict(radialaxis=dict(range=[0, 1])))
         st.plotly_chart(fig, use_container_width=True)
 
-    # Explicit % — uses Part 3 analyze_explicit_tracks results pattern
+    # Explicit % - uses Part 3 analyze_explicit_tracks results pattern
     with col4:
         eg = get_data("""
             SELECT SUM(CASE WHEN t.explicit='true' THEN 1 ELSE 0 END) AS ex,
@@ -348,7 +349,7 @@ def _explore_genre():
         opct = 100.0 * eo["ex"][0] / max(eo["tot"][0], 1)
         comp = pd.DataFrame({"Category": [selected_genre, "Overall"], "Explicit %": [gpct, opct]})
         fig = px.bar(comp, x="Category", y="Explicit %", color="Category",
-                     color_discrete_sequence=[ACCENT_CORAL, ACCENT_BLUE])
+                     color_discrete_sequence=[SPOTIFY_GREEN, SOFT_GREEN])
         style_fig(fig, "Explicit Content: Genre vs Overall")
         fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
@@ -420,7 +421,7 @@ def page_artist_search():
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(r=vals+[vals[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
                                           fill="toself", name=selected_name, line_color=SPOTIFY_GREEN))
-            style_fig(fig, f"Audio Profile — {selected_name}")
+            style_fig(fig, f"Audio Profile - {selected_name}")
             fig.update_layout(polar=dict(radialaxis=dict(range=[0, 1])))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -489,7 +490,7 @@ def page_time_analysis():
 
     col1, col2 = st.columns(2)
 
-    # Explicit trend — same query pattern as Part 3 task_explicit_collabs.py
+    # Explicit trend - same query pattern as Part 3 task_explicit_collabs.py
     with col1:
         ex = get_data(f"""
             SELECT {time_col} AS {label},
@@ -501,11 +502,11 @@ def page_time_analysis():
         """, (year_range[0], year_range[1]))
         if not ex.empty:
             fig = px.area(ex, x=label, y="explicit_pct",
-                          color_discrete_sequence=[ACCENT_CORAL])
+                          color_discrete_sequence=[SPOTIFY_GREEN], line_shape="linear")
             style_fig(fig, "Explicit Content Over Time")
             st.plotly_chart(fig, use_container_width=True)
 
-    # Collaboration rate — same query pattern as Part 3 collaborations.py
+    # Collaboration rate - same query pattern as Part 3 collaborations.py
     with col2:
         co = get_data(f"""
             SELECT {time_col} AS {label},
@@ -522,7 +523,7 @@ def page_time_analysis():
             style_fig(fig, "Collaboration Rate Over Time")
             st.plotly_chart(fig, use_container_width=True)
 
-    # Era comparison — uses Part 4 assign_era + get_era_features
+    # Era comparison - uses Part 4 assign_era + get_era_features
     st.subheader("Era Comparison")
     tracks, features, artists, albums = cached_load_all()
     t_clean, f_clean, a_clean = cached_clean_data(tracks, features, albums)
@@ -533,7 +534,7 @@ def page_time_analysis():
 
     if not era_avg.empty:
         era_reset = era_avg.reset_index()
-        cols_to_plot = [c for c in ["energy", "danceability", "valence"] if c in era_reset.columns]
+        cols_to_plot = [c for c in ["danceability", "energy", "valence"] if c in era_reset.columns]
         melted = era_reset.melt(id_vars=["era"], value_vars=cols_to_plot,
                                 var_name="feature", value_name="avg_value")
         fig = px.bar(melted, x="era", y="avg_value", color="feature",
@@ -736,14 +737,14 @@ def _deep_outliers():
 
     col1, col2 = st.columns(2)
     with col1:
-        fig = px.box(data, y=feature, color_discrete_sequence=[ACCENT_BLUE])
-        style_fig(fig, f"{feature.title()} — Box Plot")
+        fig = px.box(data, y=feature, color_discrete_sequence=[SPOTIFY_GREEN])
+        style_fig(fig, f"{feature.title()} - Box Plot")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = px.scatter(data, x=data.index, y=feature, color="is_outlier",
-                         color_discrete_map={True: ACCENT_CORAL, False: ACCENT_BLUE},
+                         color_discrete_map={True: ACCENT_CORAL, False: SPOTIFY_GREEN},
                          hover_data=["track_name", "artist_0"], opacity=0.5)
-        style_fig(fig, f"{feature.title()} — Outlier Scatter")
+        style_fig(fig, f"{feature.title()} - Outlier Scatter")
         st.plotly_chart(fig, use_container_width=True)
 
     outlier_rows = data[data["is_outlier"]].nlargest(15, feature)[["track_name", "artist_0", feature]]
@@ -828,7 +829,7 @@ def _deep_collaboration():
     with col2:
         fig = px.box(df_collab.sample(min(10000, len(df_collab))),
                      x="is_collab", y="track_popularity",
-                     color_discrete_sequence=[ACCENT_BLUE])
+                     color_discrete_sequence=[SPOTIFY_GREEN])
         style_fig(fig, "Popularity by Collaboration Type")
         fig.update_xaxes(title="Is Collaboration (0=Solo, 1=Collab)")
         st.plotly_chart(fig, use_container_width=True)
@@ -845,8 +846,15 @@ def _deep_album_consistency():
         if df_album.empty:
             st.warning(f"No tracks found for '{album_name}'.")
             return
-        st.pyplot(fig_album)  # Part 3 matplotlib figure
-        st.dataframe(df_album, use_container_width=True, hide_index=True)
+        
+        col1, spacer, col2 = st.columns([1.8, 0.2, 1])
+
+        with col1:
+            st.pyplot(fig_album)
+
+        with col2:
+            st.dataframe(df_album, use_container_width=True, hide_index=True)
+                
 
 
 # ══════════════════════════════════════════════════════════════════
