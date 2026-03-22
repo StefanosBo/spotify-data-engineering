@@ -147,3 +147,20 @@ streamlit run part5\dashboard.py
 - Dynamic plots and charts using Plotly
 - Styled tables and metrics with Spotify branding
 - Real-time filtering and exploration capabilities
+
+## Spotify API (Optional – for Artist Images)
+
+The Artist Search page includes artist images and links using the Spotify API.
+
+To enable this feature, create a file:
+
+.streamlit/secrets.toml
+
+and add:
+
+[spotify]
+client_id = "YOUR_CLIENT_ID"
+client_secret = "YOUR_CLIENT_SECRET"
+
+If no credentials are provided, the dashboard will still run normally,
+but artist images will not be displayed.
