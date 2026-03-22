@@ -34,18 +34,25 @@ def analyze_collaborations():
     
     # --- Visualization ---
     fig, ax = plt.subplots(figsize=(7, 5))
+
+    # Background
+    fig.patch.set_facecolor("#191414")
+    ax.set_facecolor("#191414")
+
     sns.barplot(
         data=avg_popularity, 
         x='Track Type', 
         y='average_popularity', 
-        palette=['#1DB954', '#191414'],
+        palette=['#1DB954', '#1ed760'],
         ax=ax
     )
-    ax.set_title("Popularity of Solo Tracks vs. Collaborations")
-    ax.set_ylabel("Average Popularity")
+    ax.set_title("Popularity of Solo Tracks vs. Collaborations", color='white')
+    ax.set_ylabel("Average Popularity", color='white')
+    ax.tick_params(axis='x', colors='white')
+    ax.tick_params(axis='y', colors='white')
     
     for index, row in avg_popularity.iterrows():
-        ax.text(index, row.average_popularity + 0.5, round(row.average_popularity, 2), color='black', ha="center")
+        ax.text(index, row.average_popularity + 0.5, round(row.average_popularity, 2), color='white', ha="center")
 
     return df_collab, avg_popularity, fig
         

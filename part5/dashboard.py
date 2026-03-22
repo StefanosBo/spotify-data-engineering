@@ -1,3 +1,15 @@
+"""
+Part 5: Spotify Analytics Dashboard
+=====================================
+This dashboard reuses functions from earlier parts of the project:
+  - Part 1 (part1_functions.py): Artist exploratory analysis
+  - Part 3 (db_utils, album_features, collaborations, task_eras,
+            task_explicit_collabs, popularity): Database queries & analysis
+  - Part 4 (spotify_wrangle): Data wrangling, outlier detection, era analysis
+
+Run with:  streamlit run dashboard.py
+"""
+
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -6,12 +18,17 @@ import numpy as np
 import os
 import sys
 
-
+# ──────────────────────────────────────────────────────────────────
+# Path setup - make all project parts importable 
+# ──────────────────────────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # part5/
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "part3"))          # part3/
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "part4"))          # part4/
 
+# ──────────────────────────────────────────────────────────────────
+# Part 1 imports
+# ──────────────────────────────────────────────────────────────────
 from part1_functions import (
     load_data,
     get_top_popularity,
@@ -28,6 +45,9 @@ from part1_functions import (
     plot_follower_groups_vs_popularity,
 )
 
+# ──────────────────────────────────────────────────────────────────
+# Part 3 imports
+# ──────────────────────────────────────────────────────────────────
 from db_utils import get_data
 from album_features import analyze_album_consistency
 from collaborations import analyze_collaborations
@@ -35,6 +55,9 @@ from task_eras import categorize_eras
 from task_explicit_collabs import analyze_explicit_tracks
 from popularity import analyze_popularity
 
+# ──────────────────────────────────────────────────────────────────
+# Part 4 imports
+# ──────────────────────────────────────────────────────────────────
 from spotify_wrangle import (
     load_all_tables,
     clean_data,
@@ -44,12 +67,17 @@ from spotify_wrangle import (
     get_era_features,
 )
 
+# ──────────────────────────────────────────────────────────────────
+# Constants & helpers
+# ──────────────────────────────────────────────────────────────────
 SPOTIFY_GREEN = "#1DB954"
+LIGHT_GREEN = "#1ed760"          
+SOFT_GREEN = "#158f3b"
 SPOTIFY_DARK = "#191414"
 ACCENT_BLUE = "#4A90D9"
 ACCENT_CORAL = "#E8555A"
 ACCENT_PURPLE = "#9B59B6"
-ACCENT_AMBER = "#F39C12"
+ACCENT_AMBER = "#F39C12"           
 PALETTE = [SPOTIFY_GREEN, ACCENT_BLUE, ACCENT_CORAL, ACCENT_PURPLE, ACCENT_AMBER,
            "#2ECC71", "#3498DB", "#E74C3C", "#8E44AD", "#F1C40F"]
 AUDIO_FEATURES = ["danceability", "energy", "speechiness", "acousticness",
@@ -70,7 +98,6 @@ DARK_CSS = """
 </style>
 """
 
-
 def style_fig(fig, title="", height=450):
     fig.update_layout(
         title=dict(text=title, font=dict(size=18, color="white")),
@@ -88,26 +115,35 @@ def fmt(n):
     return str(int(n))
 
 
+# Cached loaders using Part 1 and Part 4 functions
 @st.cache_data
 def cached_load_artist_data():
-    return load_data()              
+    return load_data()              # Part 1
 
 @st.cache_data
 def cached_load_all():
-    return load_all_tables()        
+    return load_all_tables()        # Part 4
 
 @st.cache_data
 def cached_clean_data(_tracks, _features, _albums):
     return clean_data(_tracks, _features, _albums)  # Part 4
 
+
+# ══════════════════════════════════════════════════════════════════
+# PAGE 1: OVERVIEW
+# Uses: Part 1 (load_data, plot_popularity, plot_followers, get_top_*)
+#       Part 3 (get_data for DB-level stats)
+# ══════════════════════════════════════════════════════════════════
 def page_overview():
     st.title("🎵 Spotify Database Overview")
     st.markdown("Key statistics from the research carried out throughout the project.")
 
+    # Part 1: artist-level stats
     df = cached_load_artist_data()
-    top_pop = get_top_popularity(df)        
-    top_fol = get_top_followers(df)         
+    top_pop = get_top_popularity(df)        # Part 1
+    top_fol = get_top_followers(df)         # Part 1
 
+    # Part 3: database-level stats via get_data
     stats = get_data("""
         SELECT
             (SELECT COUNT(*) FROM tracks_data) AS total_tracks,
@@ -117,6 +153,7 @@ def page_overview():
                     / COUNT(*), 1) FROM tracks_data) AS explicit_pct
     """)
 
+    # Numerical summary
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Artists", fmt(df["name"].nunique()))
     c2.metric("Tracks", fmt(stats["total_tracks"][0]))
@@ -126,13 +163,15 @@ def page_overview():
 
     st.divider()
 
+    # Graphical summary: Part 1 matplotlib plots
     st.subheader("Top Artists")
     col1, col2 = st.columns(2)
     with col1:
-        st.pyplot(plot_popularity(df))      
+        st.pyplot(plot_popularity(df))      # Part 1
     with col2:
-        st.pyplot(plot_followers(df))       
+        st.pyplot(plot_followers(df))       # Part 1
 
+    # Additional charts via Part 3 get_data
     st.subheader("Database-Wide Distributions")
     col3, col4 = st.columns(2)
     with col3:
@@ -151,11 +190,17 @@ def page_overview():
             GROUP BY decade ORDER BY decade
         """)
         fig = px.bar(decades, x="decade", y="cnt",
-                     color_discrete_sequence=[ACCENT_BLUE])
+                     color_discrete_sequence=[SPOTIFY_GREEN])
         style_fig(fig, "Tracks by Decade")
         st.plotly_chart(fig, use_container_width=True)
 
 
+# ══════════════════════════════════════════════════════════════════
+# PAGE 2: FEATURE & GENRE EXPLORER
+# Uses: Part 3 (get_data, analyze_explicit_tracks)
+#       Part 4 (label_tracks_by_feature)
+# Requirement: sidebar feature/genre selection
+# ══════════════════════════════════════════════════════════════════
 def page_feature_genre():
     st.title("🔍 Feature & Genre Explorer")
     st.sidebar.header("Explorer Options")
@@ -173,6 +218,7 @@ def _explore_feature():
 
     col1, col2 = st.columns(2)
 
+    # Feature distribution via Part 3 get_data
     with col1:
         dist = get_data(f"SELECT [{selected}] FROM features_data "
                         "ORDER BY RANDOM() LIMIT 5000")
@@ -181,6 +227,7 @@ def _explore_feature():
         style_fig(fig, f"{selected.title()} Distribution")
         st.plotly_chart(fig, use_container_width=True)
 
+    # Feature vs Popularity via Part 3 get_data
     with col2:
         scatter = get_data(f"""
             SELECT f.[{selected}], t.track_popularity
@@ -191,7 +238,7 @@ def _explore_feature():
         """, (pop_range[0], pop_range[1]))
         if not scatter.empty:
             fig = px.scatter(scatter, x=selected, y="track_popularity",
-                             color_discrete_sequence=[ACCENT_BLUE], opacity=0.4)
+                             color_discrete_sequence=[SPOTIFY_GREEN], opacity=0.4)
             style_fig(fig, f"{selected.title()} vs Track Popularity")
             valid = scatter[[selected, "track_popularity"]].dropna()
             if len(valid) > 10:
@@ -244,14 +291,14 @@ def _explore_genre():
     with col1:
         fig = px.bar(top, x="artist_popularity", y="name", orientation="h",
                      color_discrete_sequence=[SPOTIFY_GREEN])
-        style_fig(fig, f"Top Artists — {selected_genre}")
+        style_fig(fig, f"Top Artists - {selected_genre}")
         fig.update_yaxes(autorange="reversed", title="")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         if (top["followers"] > 0).any():
             fig = px.scatter(top, x="followers", y="artist_popularity",
                              hover_name="name", log_x=True,
-                             color_discrete_sequence=[ACCENT_BLUE])
+                             color_discrete_sequence=[SPOTIFY_GREEN])
             style_fig(fig, "Popularity vs Followers (log)")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -282,12 +329,12 @@ def _explore_genre():
         fig.add_trace(go.Scatterpolar(r=gv+[gv[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
                                       fill="toself", name=selected_genre, line_color=SPOTIFY_GREEN))
         fig.add_trace(go.Scatterpolar(r=ov_v+[ov_v[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
-                                      fill="toself", name="Overall", line_color=ACCENT_BLUE, opacity=0.4))
-        style_fig(fig, f"Audio Profile — {selected_genre}")
+                                      fill="toself", name="Overall", line_color=SOFT_GREEN, opacity=0.4))
+        style_fig(fig, f"Audio Profile - {selected_genre}")
         fig.update_layout(polar=dict(radialaxis=dict(range=[0, 1])))
         st.plotly_chart(fig, use_container_width=True)
 
-    # Explicit % — uses Part 3 analyze_explicit_tracks results pattern
+    # Explicit % - uses Part 3 analyze_explicit_tracks results pattern
     with col4:
         eg = get_data("""
             SELECT SUM(CASE WHEN t.explicit='true' THEN 1 ELSE 0 END) AS ex,
@@ -302,12 +349,18 @@ def _explore_genre():
         opct = 100.0 * eo["ex"][0] / max(eo["tot"][0], 1)
         comp = pd.DataFrame({"Category": [selected_genre, "Overall"], "Explicit %": [gpct, opct]})
         fig = px.bar(comp, x="Category", y="Explicit %", color="Category",
-                     color_discrete_sequence=[ACCENT_CORAL, ACCENT_BLUE])
+                     color_discrete_sequence=[SPOTIFY_GREEN, SOFT_GREEN])
         style_fig(fig, "Explicit Content: Genre vs Overall")
         fig.update_layout(showlegend=False)
         st.plotly_chart(fig, use_container_width=True)
 
 
+# ══════════════════════════════════════════════════════════════════
+# PAGE 3: ARTIST SEARCH
+# Uses: Part 1 (load_data, get_correlation)
+#       Part 3 (get_data)
+# Requirement: sidebar artist search for top 200
+# ══════════════════════════════════════════════════════════════════
 def page_artist_search():
     st.title("🔎 Artist Search")
 
@@ -368,7 +421,7 @@ def page_artist_search():
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(r=vals+[vals[0]], theta=AUDIO_FEATURES+[AUDIO_FEATURES[0]],
                                           fill="toself", name=selected_name, line_color=SPOTIFY_GREEN))
-            style_fig(fig, f"Audio Profile — {selected_name}")
+            style_fig(fig, f"Audio Profile - {selected_name}")
             fig.update_layout(polar=dict(radialaxis=dict(range=[0, 1])))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -397,6 +450,13 @@ def page_artist_search():
         st.dataframe(top_tracks, use_container_width=True, hide_index=True)
 
 
+# ══════════════════════════════════════════════════════════════════
+# PAGE 4: TIME ANALYSIS
+# Uses: Part 3 (get_data, analyze_collaborations, analyze_explicit_tracks)
+#       Part 4 (assign_era, add_era_column, get_era_features,
+#               get_feature_trends, get_yearly_popularity)
+# Requirement: time component with year filtering
+# ══════════════════════════════════════════════════════════════════
 def page_time_analysis():
     st.title("⏳ Music Through Time")
 
@@ -430,6 +490,7 @@ def page_time_analysis():
 
     col1, col2 = st.columns(2)
 
+    # Explicit trend - same query pattern as Part 3 task_explicit_collabs.py
     with col1:
         ex = get_data(f"""
             SELECT {time_col} AS {label},
@@ -441,10 +502,11 @@ def page_time_analysis():
         """, (year_range[0], year_range[1]))
         if not ex.empty:
             fig = px.area(ex, x=label, y="explicit_pct",
-                          color_discrete_sequence=[ACCENT_CORAL])
+                          color_discrete_sequence=[SPOTIFY_GREEN], line_shape="linear")
             style_fig(fig, "Explicit Content Over Time")
             st.plotly_chart(fig, use_container_width=True)
 
+    # Collaboration rate - same query pattern as Part 3 collaborations.py
     with col2:
         co = get_data(f"""
             SELECT {time_col} AS {label},
@@ -461,16 +523,18 @@ def page_time_analysis():
             style_fig(fig, "Collaboration Rate Over Time")
             st.plotly_chart(fig, use_container_width=True)
 
+    # Era comparison - uses Part 4 assign_era + get_era_features
     st.subheader("Era Comparison")
     tracks, features, artists, albums = cached_load_all()
     t_clean, f_clean, a_clean = cached_clean_data(tracks, features, albums)
-    a_clean = add_era_column(a_clean)       
+    a_clean = add_era_column(a_clean)       # Part 4
+    # Filter to selected year range
     a_filtered = a_clean[(a_clean["year"] >= year_range[0]) & (a_clean["year"] <= year_range[1])]
     era_avg = get_era_features(a_filtered, f_clean)  # Part 4
 
     if not era_avg.empty:
         era_reset = era_avg.reset_index()
-        cols_to_plot = [c for c in ["energy", "danceability", "valence"] if c in era_reset.columns]
+        cols_to_plot = [c for c in ["danceability", "energy", "valence"] if c in era_reset.columns]
         melted = era_reset.melt(id_vars=["era"], value_vars=cols_to_plot,
                                 var_name="feature", value_name="avg_value")
         fig = px.bar(melted, x="era", y="avg_value", color="feature",
@@ -479,6 +543,12 @@ def page_time_analysis():
         st.plotly_chart(fig, use_container_width=True)
 
 
+# ══════════════════════════════════════════════════════════════════
+# PAGE 5: DEEP DIVE
+# Uses: Part 1 (overperformers, regression)
+#       Part 3 (analyze_collaborations, analyze_album_consistency)
+#       Part 4 (detect_outliers_iqr, album_feature_summary)
+# ══════════════════════════════════════════════════════════════════
 def page_deep_dive():
     st.title("🔬 Deep Dive Analyses")
     st.sidebar.header("Analysis Selection")
@@ -495,6 +565,7 @@ def page_deep_dive():
     elif analysis.startswith("Collab"):  _deep_collaboration()
     else:                                _deep_album_consistency()
 
+# Over-performers & legacy artists 
 def _deep_overperformers():
     df = cached_load_artist_data()
     correlation = get_correlation(df)
@@ -534,29 +605,32 @@ def _deep_overperformers():
     over_df.index += 1
     over_df.index.name = "#"
 
+# Style the over-performers table
     styled_over = (
         over_df
         [["name", "artist_popularity", "followers"]]
         .rename(columns={
             "artist_popularity": "Popularity",
             "followers": "Followers"
-        }) 
+        }) # Format the table with renamed columns and only relevant info
         .style
         .set_properties(**{
             "background-color": "#191414",
             "color": "white",
             "border-color": "#1DB954"
-        }) 
+        }) # Set dark background and green borders for the table
         .set_table_styles([
             {"selector": "th", "props": [("background-color", "#1DB954"), ("color", "white")]},
             {"selector": "td", "props": [("border", "1px solid #1DB954")]}
         ]) # Style the header and cells with Spotify green and white text
     )
 
+    # Prepare dataframe first
     legacy_df = legacy_artists.reset_index(drop=True)
     legacy_df.index += 1
     legacy_df.index.name = "#"
 
+    # Style the legacy artists table
     styled_legacy = (
         legacy_df
         [["name", "artist_popularity", "followers"]]
@@ -576,6 +650,7 @@ def _deep_overperformers():
         ])
     )
 
+    # Display the plot and tables side by side
     left_col, right_col = st.columns([1.8, 1])
 
     with left_col:
@@ -602,13 +677,14 @@ def _deep_overperformers():
 
     st.divider()
 
+        # Add a section for genre breadth analysis
     st.subheader("Genre Breadth Analysis")
 
     genre_summary = get_num_genres_summary(df)
 
-    col1, col2, col3 = st.columns(3) 
+    col1, col2, col3 = st.columns(3) # Create three columns for the summary metrics
 
-    
+    # Display the summary metrics for number of genres and correlations
     with col1:
         st.metric("Average # of Genres", round(genre_summary["mean_num_genres"], 2))
 
@@ -622,9 +698,11 @@ def _deep_overperformers():
 
     col4, col5 = st.columns(2)
 
+    # Plot the number of genres vs popularity 
     with col4:
         st.pyplot(plot_num_genres_vs_popularity(df))
 
+    # Plot the number of genres vs followers
     with col5:
         st.pyplot(plot_num_genres_vs_followers(df))
 
@@ -659,14 +737,14 @@ def _deep_outliers():
 
     col1, col2 = st.columns(2)
     with col1:
-        fig = px.box(data, y=feature, color_discrete_sequence=[ACCENT_BLUE])
-        style_fig(fig, f"{feature.title()} — Box Plot")
+        fig = px.box(data, y=feature, color_discrete_sequence=[SPOTIFY_GREEN])
+        style_fig(fig, f"{feature.title()} - Box Plot")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = px.scatter(data, x=data.index, y=feature, color="is_outlier",
-                         color_discrete_map={True: ACCENT_CORAL, False: ACCENT_BLUE},
+                         color_discrete_map={True: ACCENT_CORAL, False: SPOTIFY_GREEN},
                          hover_data=["track_name", "artist_0"], opacity=0.5)
-        style_fig(fig, f"{feature.title()} — Outlier Scatter")
+        style_fig(fig, f"{feature.title()} - Outlier Scatter")
         st.plotly_chart(fig, use_container_width=True)
 
     outlier_rows = data[data["is_outlier"]].nlargest(15, feature)[["track_name", "artist_0", feature]]
@@ -751,7 +829,7 @@ def _deep_collaboration():
     with col2:
         fig = px.box(df_collab.sample(min(10000, len(df_collab))),
                      x="is_collab", y="track_popularity",
-                     color_discrete_sequence=[ACCENT_BLUE])
+                     color_discrete_sequence=[SPOTIFY_GREEN])
         style_fig(fig, "Popularity by Collaboration Type")
         fig.update_xaxes(title="Is Collaboration (0=Solo, 1=Collab)")
         st.plotly_chart(fig, use_container_width=True)
@@ -768,10 +846,20 @@ def _deep_album_consistency():
         if df_album.empty:
             st.warning(f"No tracks found for '{album_name}'.")
             return
-        st.pyplot(fig_album)  # Part 3 matplotlib figure
-        st.dataframe(df_album, use_container_width=True, hide_index=True)
+        
+        col1, spacer, col2 = st.columns([1.8, 0.2, 1])
+
+        with col1:
+            st.pyplot(fig_album)
+
+        with col2:
+            st.dataframe(df_album, use_container_width=True, hide_index=True)
+                
 
 
+# ══════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════
 def main():
     st.set_page_config(
         page_title="Spotify Analytics Dashboard",

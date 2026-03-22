@@ -25,8 +25,14 @@ def analyze_album_consistency(album_name="The Dark Side Of The Moon"):
     
     # Visualization
     fig, ax = plt.subplots(figsize=(10, 5))
-    sns.boxplot(data=df_album[['danceability', 'loudness']], ax=ax)
-    ax.set_title(f"Consistency of Features: {album_name}")
+    fig.patch.set_facecolor("#191414")
+    ax.set_facecolor("#191414")
+    sns.boxplot(data=df_album[['danceability', 'loudness']], palette=["#1DB954", "#1ed760"], ax=ax)
+    ax.set_title(f"Consistency of Features: {album_name}", color="white")
+    ax.set_ylabel("Value", color="white")
+    ax.tick_params(colors="white")
+    for spine in ax.spines.values():
+        spine.set_color("white")
 
     return df_album, fig
 
